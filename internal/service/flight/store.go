@@ -96,9 +96,15 @@ func (flightSore *FlightStore) GetFlightsByCriteria(ctx context.Context,
 			return types.FlightFetchResult{}, err
 		}
 
-		result.Flights = append(result.Flights, types.FlightWithRemain{
-			Flight: flight,
-			Remain: int(flight.AvailableSeats) + int(flight.WaitSeats),
+		result.Flights = append(result.Flights, types.FlightResponse{
+			ID:          flight.ID,
+			Price:       flight.Price,
+			FlightDate:  flight.FlightDate,
+			Departure:   flight.Departure,
+			Destination: flight.Destination,
+			CreatedAt:   flight.CreatedAt,
+			UpdatedAt:   flight.UpdatedAt,
+			Remain:      int(flight.AvailableSeats) + int(flight.WaitSeats),
 		})
 	}
 	result.Limit = pageInfo.Limit

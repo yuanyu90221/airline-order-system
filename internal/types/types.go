@@ -48,12 +48,18 @@ type Pagination struct {
 	Offset     int64 `json:"offset"`
 	Limit      int64 `json:"limit"`
 }
-type FlightWithRemain struct {
-	Flight
-	Remain int `json:"remain"`
+type FlightResponse struct {
+	ID          uuid.UUID `json:"id" db:"id"`
+	Departure   string    `json:"departure" db:"departure"`
+	Destination string    `json:"destination" db:"destination"`
+	FlightDate  string    `json:"flight_date" db:"flight_date"`
+	Price       float64   `json:"price" db:"price"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	Remain      int       `json:"remain"`
 }
 type FlightFetchResult struct {
-	Flights []FlightWithRemain `json:"flights"`
+	Flights []FlightResponse `json:"flights"`
 	Pagination
 }
 type FlightStore interface {
