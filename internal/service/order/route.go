@@ -9,7 +9,6 @@ import (
 	bloomfilter "github.com/alovn/go-bloomfilter"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 	"github.com/yuanyu90221/airline-order-system/internal/types"
 	"github.com/yuanyu90221/airline-order-system/internal/util"
 )
@@ -48,14 +47,9 @@ func (h *Handler) CreateOrder(ctx *gin.Context) {
 	}
 	log.Println("requestOrder", requestOrder)
 	// use bloomfilter to check flightID exists
-	fligtId, err := uuid.Parse(requestOrder.FlightID)
+	binaryFlightID, status, err := util.ParseFlightIDIntoBinary(requestOrder.FlightID)
 	if err != nil {
-		util.WriteError(ctx.Writer, http.StatusBadRequest, fmt.Errorf("failed to format FlightID to uuid %w", err))
-		return
-	}
-	binaryFlightID, err := fligtId.MarshalBinary()
-	if err != nil {
-		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("failed to format FlightID to uuid binary %w", err))
+		util.WriteError(ctx.Writer, status, err)
 		return
 	}
 	isExist, err := h.bFilter.MightContain(binaryFlightID)

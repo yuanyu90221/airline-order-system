@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 )
 
 var Validdate = validator.New()
@@ -34,4 +35,16 @@ func FailOnError(err error, msg string) {
 	if err != nil {
 		log.Fatalf("%s: %s", msg, err)
 	}
+}
+
+func ParseFlightIDIntoBinary(flightID string) ([]byte, int, error) {
+	fligtId, err := uuid.Parse(flightID)
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to format FlightID to uuid %w", err)
+	}
+	binaryFlightID, err := fligtId.MarshalBinary()
+	if err != nil {
+		return nil, http.StatusInternalServerError, fmt.Errorf("failed to format FlightID to uuid binary %w", err)
+	}
+	return binaryFlightID, 0, nil
 }
