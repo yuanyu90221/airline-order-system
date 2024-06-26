@@ -1,0 +1,33 @@
+services:
+  postgres:
+    restart: always
+    image: postgres:14
+    container_name: postgres_airline
+    volumes:
+      - ${HOST_DIR}:/var/lib/postgresql/data
+    expose:
+      - 5432
+    ports:
+      - ${POSTGRES_PORT}:5432
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1k"
+        max-file: "3"
+  redis:
+    build:
+      context: .
+      dockerfile: ./redis-dockerfile
+    container_name: airline-redis
+    restart: always
+    ports:
+      - ${REDIS_PORT}:6379
+    volumes:
+      - ./data:/data
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_PORT=${REDIS_PORT}
