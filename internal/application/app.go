@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	bloomfilter "github.com/alovn/go-bloomfilter"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
@@ -18,10 +19,11 @@ import (
 
 // define app dependency
 type App struct {
-	router *gin.Engine
-	rdb    *redis.Client
-	config *config.Config
-	db     *sql.DB
+	router  *gin.Engine
+	rdb     *redis.Client
+	config  *config.Config
+	db      *sql.DB
+	bFilter bloomfilter.BloomFilter
 }
 
 func New(config *config.Config) *App {
@@ -29,13 +31,15 @@ func New(config *config.Config) *App {
 	if err != nil {
 		util.FailOnError(err, "failed to connect")
 	}
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     config.RedisAddr,
+		Password: config.RedisPassword,
+	})
 	app := &App{
-		rdb: redis.NewClient(&redis.Options{
-			Addr:     config.RedisAddr,
-			Password: config.RedisPassword,
-		}),
-		config: config,
-		db:     dbConn,
+		rdb:     rdb,
+		config:  config,
+		db:      dbConn,
+		bFilter: bloomfilter.NewRedisBloomFilter(rdb, "redis-bloom-filter", 100000),
 	}
 
 	app.loadRoutes()

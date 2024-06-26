@@ -6,19 +6,23 @@ import (
 	"log"
 	"net/http"
 
+	bloomfilter "github.com/alovn/go-bloomfilter"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/yuanyu90221/airline-order-system/internal/types"
 	"github.com/yuanyu90221/airline-order-system/internal/util"
 )
 
 type Handler struct {
 	cacheStore types.OrderCacheStore
+	bFilter    bloomfilter.BloomFilter
 }
 
-func NewHandler(cacheStore types.OrderCacheStore) *Handler {
+func NewHandler(cacheStore types.OrderCacheStore, bFilter bloomfilter.BloomFilter) *Handler {
 	return &Handler{
 		cacheStore: cacheStore,
+		bFilter:    bFilter,
 	}
 }
 
@@ -43,8 +47,26 @@ func (h *Handler) CreateOrder(ctx *gin.Context) {
 		return
 	}
 	log.Println("requestOrder", requestOrder)
-	// TODO: use bloomfilter to check flightID exists
-
+	// use bloomfilter to check flightID exists
+	fligtId, err := uuid.Parse(requestOrder.FlightID)
+	if err != nil {
+		util.WriteError(ctx.Writer, http.StatusBadRequest, fmt.Errorf("failed to format FlightID to uuid %w", err))
+		return
+	}
+	binaryFlightID, err := fligtId.MarshalBinary()
+	if err != nil {
+		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("failed to format FlightID to uuid binary %w", err))
+		return
+	}
+	isExist, err := h.bFilter.MightContain(binaryFlightID)
+	if err != nil {
+		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("failed to check FlightID in bloomfilter %w", err))
+		return
+	}
+	if !isExist {
+		util.WriteError(ctx.Writer, http.StatusBadRequest, fmt.Errorf("FlightID %s not in bloomfilter", requestOrder.FlightID))
+		return
+	}
 	// create order from cache store
 	result, err := h.cacheStore.CreateOrder(ctx, requestOrder)
 	if err != nil {
