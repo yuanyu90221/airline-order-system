@@ -30,9 +30,9 @@ type Order struct {
 }
 
 type QueryFlightParams struct {
-	FlightDate  time.Time `json:"flight_date,omitempty"`
-	Destination string    `json:"destination,omitempty"`
-	Departure   string    `json:"depature,omitempty"`
+	FlightDate  int64  `json:"flight_date"`
+	Destination string `json:"destination"`
+	Departure   string `json:"depature"`
 }
 type CreateFlightParams struct {
 	Price          float64 `json:"price" validate:"required"`
@@ -43,9 +43,9 @@ type CreateFlightParams struct {
 	WaitSeats      int64   `json:"wait_seats" validate:"required"`
 }
 type Pagination struct {
-	Total       int `json:"total"`
-	CurrentPage int `json:"current_page"`
-	PerPage     int `json:"per_page"`
+	NextOffset int64 `json:"next_offset"`
+	Offset     int64 `json:"offset"`
+	Limit      int64 `json:"limit"`
 }
 type FlightWithRemain struct {
 	Flight
