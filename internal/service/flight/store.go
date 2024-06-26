@@ -3,6 +3,7 @@ package flight
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -40,7 +41,7 @@ func (flightStore *FlightStore) CreateFlight(ctx context.Context, createParams t
 	return result, nil
 }
 
-func (flightSore *FlightStore) GetFlightsByCriteria(ctx context.Context,
+func (flightStore *FlightStore) GetFlightsByCriteria(ctx context.Context,
 	queryParams types.QueryFlightParams,
 	pageInfo types.Pagination) (types.FlightFetchResult, error) {
 	// original sql
@@ -74,7 +75,7 @@ func (flightSore *FlightStore) GetFlightsByCriteria(ctx context.Context,
 	if err != nil {
 		return types.FlightFetchResult{}, err
 	}
-	rows, err := flightSore.db.QueryContext(ctx, query, args...)
+	rows, err := flightStore.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return types.FlightFetchResult{}, err
 	}
@@ -97,20 +98,51 @@ func (flightSore *FlightStore) GetFlightsByCriteria(ctx context.Context,
 		}
 
 		result.Flights = append(result.Flights, types.FlightResponse{
-			ID:          flight.ID,
-			Price:       flight.Price,
-			FlightDate:  flight.FlightDate,
-			Departure:   flight.Departure,
-			Destination: flight.Destination,
-			CreatedAt:   flight.CreatedAt,
-			UpdatedAt:   flight.UpdatedAt,
-			Remain:      int(flight.AvailableSeats) + int(flight.WaitSeats),
+			Flight: flight,
+			Remain: int(flight.AvailableSeats) + int(flight.WaitSeats),
 		})
 	}
 	result.Limit = pageInfo.Limit
 	result.Offset = pageInfo.Offset
 	if len(result.Flights) > 0 {
 		result.NextOffset = int64(offset + limit)
+	}
+	return result, nil
+}
+
+func (flightStore *FlightStore) GetFlightById(ctx context.Context, flightID uuid.UUID) (types.FlightResponse, error) {
+	queryBuilder := sq.Select("id", "price", "departure", "destination", "flight_date", "available_seats", "wait_seats", "next_wait_order", "created_at", "updated_at").From("flights").PlaceholderFormat(sq.Dollar)
+	queryBuilder = queryBuilder.Where(sq.Eq{"id": flightID})
+	query, args, err := queryBuilder.ToSql()
+	if err != nil {
+		return types.FlightResponse{}, fmt.Errorf("failed to use query builder: %w", err)
+	}
+	rows, err := flightStore.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return types.FlightResponse{}, nil
+		}
+		return types.FlightResponse{}, fmt.Errorf("failed to executed %w", err)
+	}
+	var result types.FlightResponse
+	for rows.Next() {
+		var flight types.Flight
+		err = rows.Scan(&flight.ID,
+			&flight.Price,
+			&flight.Departure,
+			&flight.Destination,
+			&flight.FlightDate,
+			&flight.AvailableSeats,
+			&flight.WaitSeats,
+			&flight.NextWaitOrder,
+			&flight.CreatedAt,
+			&flight.UpdatedAt,
+		)
+		if err != nil {
+			return types.FlightResponse{}, err
+		}
+		result.Flight = flight
+		result.Remain = int(flight.AvailableSeats) + int(flight.WaitSeats)
 	}
 	return result, nil
 }

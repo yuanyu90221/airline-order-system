@@ -10,6 +10,7 @@ import (
 	bloomfilter "github.com/alovn/go-bloomfilter"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/yuanyu90221/airline-order-system/internal/types"
 	"github.com/yuanyu90221/airline-order-system/internal/util"
 )
@@ -30,6 +31,7 @@ func NewHandler(cacheStore types.OrderCacheStore, flightStore types.FlightStore,
 func (h *Handler) RegisterRoute(router *gin.RouterGroup) {
 	router.POST("/", h.CreateFlight)
 	router.GET("/", h.GetFlightsByCriteria)
+	router.GET("/:id", h.GetFlightById)
 }
 func (h *Handler) CreateFlight(ctx *gin.Context) {
 	var createFlight types.CreateFlightParams
@@ -106,4 +108,23 @@ func (h *Handler) GetFlightsByCriteria(ctx *gin.Context) {
 		return
 	}
 	util.FailOnError(util.WriteJSON(ctx.Writer, http.StatusOK, result), "failed on response json")
+}
+
+func (h *Handler) GetFlightById(ctx *gin.Context) {
+	flightID := ctx.Param("id")
+	if flightID == "" {
+		util.WriteError(ctx.Writer, http.StatusBadRequest, fmt.Errorf("flight id not provided"))
+		return
+	}
+	id, err := uuid.Parse(flightID)
+	if err != nil {
+		util.WriteError(ctx.Writer, http.StatusBadRequest, fmt.Errorf("failed to parse id %s into uuid %w", flightID, err))
+		return
+	}
+	result, err := h.flightStore.GetFlightById(ctx, id)
+	if err != nil {
+		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("failed to get flight by id"))
+		return
+	}
+	util.FailOnError(util.WriteJSON(ctx.Writer, http.StatusOK, result), "failed to response json")
 }
