@@ -17,6 +17,7 @@ type Flight struct {
 	WaitSeats      int32     `json:"wait_seats" db:"wait_seats"`
 	NextWaitOrder  int32     `json:"next_wait_order" db:"next_wait_order"`
 	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type Order struct {

@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS flights (
   available_seats INTEGER NOT NUlL,
   wait_seats INTEGER NOT NULL,
   next_wait_order INTEGER NOT NULL DEFAULT -1,
-  created_at TIMESTAMP NOT NULL DEFAULT now()
+  created_at TIMESTAMP NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS flight_date ON flights (flight_date);

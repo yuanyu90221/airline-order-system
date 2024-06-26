@@ -32,7 +32,8 @@ func (flightStore *FlightStore) CreateFlight(ctx context.Context, createParams t
 	var result types.Flight
 
 	err = queryBuilder.QueryRowContext(ctx, flightID, createParams.Price, createParams.Destination, createParams.Departure,
-		createParams.AvailableSeats, createParams.WaitSeats, time.Unix(createParams.FlightDate, 0)).Scan(&result.ID, &result.Departure, &result.Destination, &result.Price, &result.FlightDate, &result.AvailableSeats, &result.WaitSeats, &result.NextWaitOrder, &result.CreatedAt)
+		createParams.AvailableSeats, createParams.WaitSeats, time.Unix(createParams.FlightDate, 0)).Scan(&result.ID, &result.Departure, &result.Destination, &result.Price, &result.FlightDate, &result.AvailableSeats, &result.WaitSeats,
+		&result.NextWaitOrder, &result.CreatedAt, &result.UpdatedAt)
 	if err != nil {
 		return types.Flight{}, fmt.Errorf("could not insert flights: %w", err)
 	}
@@ -43,7 +44,7 @@ func (flightSore *FlightStore) GetFlightsByCriteria(ctx context.Context,
 	queryParams types.QueryFlightParams,
 	pageInfo types.Pagination) (types.FlightFetchResult, error) {
 	// original sql
-	queryBuilder := sq.Select("id", "price", "departure", "destination", "flight_date", "available_seats", "wait_seats", "next_wait_order", "created_at").From("flights").PlaceholderFormat(sq.Dollar)
+	queryBuilder := sq.Select("id", "price", "departure", "destination", "flight_date", "available_seats", "wait_seats", "next_wait_order", "created_at", "updated_at").From("flights").PlaceholderFormat(sq.Dollar)
 	// fligt_date >= time.Now()
 	whereCondition := []sq.Sqlizer{sq.GtOrEq{"flight_date": time.Now().UTC()},
 		sq.NotEq{"available_seats": 0}, sq.NotEq{"wait_seats": 0}}
@@ -89,6 +90,7 @@ func (flightSore *FlightStore) GetFlightsByCriteria(ctx context.Context,
 			&flight.WaitSeats,
 			&flight.NextWaitOrder,
 			&flight.CreatedAt,
+			&flight.UpdatedAt,
 		)
 		if err != nil {
 			return types.FlightFetchResult{}, err
