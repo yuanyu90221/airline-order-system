@@ -31,7 +31,7 @@ func (app *App) loadOrderRoutes() {
 	orderHandler.RegisterRoute(orderGroup)
 }
 
-// TODO: setup flight route
+// setup flight route
 func (app *App) loadFlightRoutes() {
 	flightGroup := app.router.Group("/flights")
 	orderCacheStore := cache.NewCacheStore(app.rdb)
