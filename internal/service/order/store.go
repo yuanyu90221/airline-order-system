@@ -52,7 +52,7 @@ func (orderStore *OrderStore) CreateOrder(tx *sql.Tx, ctx context.Context, creat
 func (orderStore *OrderStore) GetOrderById(ctx context.Context, orderID uuid.UUID) (types.Order, error) {
 	queryBuilder := sq.Select("id",
 		"flight_id", "paid_at", "canceled_at",
-		"created_at", "wait_order", "ticket_numbers").From("orders").Where(sq.Eq{"id": orderID})
+		"created_at", "wait_order", "ticket_numbers").From("orders").Where(sq.Eq{"id": orderID}).PlaceholderFormat(sq.Dollar)
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		return types.Order{}, fmt.Errorf("failed to create query string %w", err)

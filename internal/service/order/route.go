@@ -10,6 +10,7 @@ import (
 	bloomfilter "github.com/alovn/go-bloomfilter"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/yuanyu90221/airline-order-system/internal/broker"
 	"github.com/yuanyu90221/airline-order-system/internal/config"
 	"github.com/yuanyu90221/airline-order-system/internal/types"
@@ -21,15 +22,17 @@ type Handler struct {
 	flightCacheStore types.FlightCacheStore
 	bFilter          bloomfilter.BloomFilter
 	mq               *broker.Broker
+	orderStore       types.OrderStore
 }
 
 func NewHandler(orderCacheStore types.OrderCacheStore, flightCacheStore types.FlightCacheStore,
-	bFilter bloomfilter.BloomFilter, mq *broker.Broker) *Handler {
+	bFilter bloomfilter.BloomFilter, mq *broker.Broker, orderStore types.OrderStore) *Handler {
 	return &Handler{
 		orderCacheStore:  orderCacheStore,
 		flightCacheStore: flightCacheStore,
 		bFilter:          bFilter,
 		mq:               mq,
+		orderStore:       orderStore,
 	}
 }
 
@@ -120,5 +123,20 @@ func (h *Handler) CreateOrder(ctx *gin.Context) {
 }
 
 func (h *Handler) GetOrderById(ctx *gin.Context) {
-	// TODO: add get order by id
+	orderID := ctx.Param("id")
+	if orderID == "" {
+		util.WriteError(ctx.Writer, http.StatusBadRequest, fmt.Errorf("flight id not provided"))
+		return
+	}
+	id, err := uuid.Parse(orderID)
+	if err != nil {
+		util.WriteError(ctx.Writer, http.StatusBadRequest, fmt.Errorf("failed to parse id %s into uuid %w", orderID, err))
+		return
+	}
+	result, err := h.orderStore.GetOrderById(ctx, id)
+	if err != nil {
+		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("failed to get order %w", err))
+		return
+	}
+	util.FailOnError(util.WriteJSON(ctx.Writer, http.StatusOK, result), "failed to response json")
 }
