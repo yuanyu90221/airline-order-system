@@ -146,3 +146,40 @@ func (flightStore *FlightStore) GetFlightById(ctx context.Context, flightID uuid
 	}
 	return result, nil
 }
+
+func (flightStore *FlightStore) UpdateFlight(tx *sql.Tx, ctx context.Context,
+	updateFlightParams types.UpdateFlightEntityRequest) (types.Flight, error) {
+	updatedAt := time.Now().UTC()
+	queryBuilder := sq.Update("flights").Set("available_seats", updateFlightParams.AvailableSeats)
+	queryBuilder = queryBuilder.Set("wait_seats", updateFlightParams.WaitSeats)
+	queryBuilder = queryBuilder.Set("wait_next_order", updateFlightParams.NextWaitOrder)
+	queryBuilder = queryBuilder.Set("updated_at", updatedAt)
+	queryBuilder = queryBuilder.Where(sq.Eq{"id": updateFlightParams.ID}).Suffix("RETURNING *;")
+	queryBuilder = queryBuilder.PlaceholderFormat(sq.Dollar)
+	query, args, err := queryBuilder.ToSql()
+	if err != nil {
+		return types.Flight{}, fmt.Errorf("failed to use query builder: %w", err)
+	}
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return types.Flight{}, fmt.Errorf("failed to executed %w", err)
+	}
+	var flight types.Flight
+	if rows.Next() {
+		err = rows.Scan(&flight.ID,
+			&flight.Price,
+			&flight.Departure,
+			&flight.Destination,
+			&flight.FlightDate,
+			&flight.AvailableSeats,
+			&flight.WaitSeats,
+			&flight.NextWaitOrder,
+			&flight.CreatedAt,
+			&flight.UpdatedAt,
+		)
+		if err != nil {
+			return types.Flight{}, err
+		}
+	}
+	return flight, nil
+}

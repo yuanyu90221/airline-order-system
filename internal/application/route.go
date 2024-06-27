@@ -27,7 +27,7 @@ func (app *App) loadOrderRoutes() {
 	orderGroup := app.router.Group("/orders")
 	orderCacheStore := order.NewCacheStore(app.rdb)
 	flightCacheStore := flight.NewCacheStore(app.rdb)
-	orderHandler := order.NewHandler(orderCacheStore, flightCacheStore, app.bFilter)
+	orderHandler := order.NewHandler(orderCacheStore, flightCacheStore, app.bFilter, app.broker)
 	orderHandler.RegisterRoute(orderGroup)
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
+	"github.com/yuanyu90221/airline-order-system/internal/broker"
 	"github.com/yuanyu90221/airline-order-system/internal/config"
 	"github.com/yuanyu90221/airline-order-system/internal/db"
 	"github.com/yuanyu90221/airline-order-system/internal/util"
@@ -24,6 +25,7 @@ type App struct {
 	config  *config.Config
 	db      *sql.DB
 	bFilter bloomfilter.BloomFilter
+	broker  *broker.Broker
 }
 
 func New(config *config.Config) *App {
@@ -36,11 +38,16 @@ func New(config *config.Config) *App {
 		util.FailOnError(err, "failed to parse redis url")
 	}
 	rdb := redis.NewClient(opts)
+	broker, err := broker.NewBroker(config.RabbitMQURL)
+	if err != nil {
+		util.FailOnError(err, "failed to connect rabbitMq")
+	}
 	app := &App{
 		rdb:     rdb,
 		config:  config,
 		db:      dbConn,
 		bFilter: bloomfilter.NewRedisBloomFilter(rdb, "redis-bloom-filter", 100000),
+		broker:  broker,
 	}
 
 	app.loadRoutes()
@@ -65,6 +72,9 @@ func (app *App) Start(ctx context.Context) error {
 		}
 		if err := app.db.Close(); err != nil {
 			log.Println("failed to close db connection", err)
+		}
+		if err := app.broker.Close(); err != nil {
+			log.Println("failed to close rabbitmq", err)
 		}
 	}()
 	log.Printf("Starting server on %s", app.config.Port)

@@ -31,3 +31,25 @@ services:
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_PORT=${REDIS_PORT}
+  rabbitmq:
+    container_name: airline-rabbitmq
+    image: rabbitmq:3.11-management-alpine
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    ports:
+      - 5672:5672
+      - 15672:15672
+    restart: always
+    volumes:
+      - ./data:/var/lib/rabbitmq
+    logging: 
+      driver: "json-file"
+      options: 
+        max-size: "1k"
+        max-file: "3"

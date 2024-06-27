@@ -1,6 +1,7 @@
 package order
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -9,6 +10,8 @@ import (
 	bloomfilter "github.com/alovn/go-bloomfilter"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/yuanyu90221/airline-order-system/internal/broker"
+	"github.com/yuanyu90221/airline-order-system/internal/config"
 	"github.com/yuanyu90221/airline-order-system/internal/types"
 	"github.com/yuanyu90221/airline-order-system/internal/util"
 )
@@ -17,14 +20,16 @@ type Handler struct {
 	orderCacheStore  types.OrderCacheStore
 	flightCacheStore types.FlightCacheStore
 	bFilter          bloomfilter.BloomFilter
+	mq               *broker.Broker
 }
 
 func NewHandler(orderCacheStore types.OrderCacheStore, flightCacheStore types.FlightCacheStore,
-	bFilter bloomfilter.BloomFilter) *Handler {
+	bFilter bloomfilter.BloomFilter, mq *broker.Broker) *Handler {
 	return &Handler{
 		orderCacheStore:  orderCacheStore,
 		flightCacheStore: flightCacheStore,
 		bFilter:          bFilter,
+		mq:               mq,
 	}
 }
 
@@ -88,8 +93,29 @@ func (h *Handler) CreateOrder(ctx *gin.Context) {
 		util.WriteError(ctx.Writer, http.StatusBadRequest, fmt.Errorf(`seats insufficient, could not create order with request ticket numbers: %d , with available seats %d, wait seats %d `, requestOrder.TicketNumbers, result.CurrentTotal, result.CurrentWait))
 		return
 	}
-	// TODO: update result to order and flight
-	util.FailOnError(util.WriteJSON(ctx.Writer, http.StatusCreated, result), "failed to write result")
+	// update result to rabbitmq
+	requestEvent := types.CreateOrderEvent{
+		FlightID:       requestOrder.FlightID,
+		TicketNumbers:  requestOrder.TicketNumbers,
+		AvailableSeats: result.CurrentTotal,
+		WaitOrder:      result.CurrentWaitOrder,
+		WaitSeats:      result.CurrentWait,
+		IsWait:         result.IsWait,
+	}
+	data, err := json.Marshal(requestEvent)
+	if err != nil {
+		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("marshal data error %w", err))
+		return
+	}
+	err = h.mq.SendMessageToQueue(ctx, config.AppConfig.OrderQueueName, data)
+	if err != nil {
+		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("send rabbitmq error %w", err))
+		return
+	}
+	if result.IsWait {
+		requestEvent.WaitOrder = -1
+	}
+	util.FailOnError(util.WriteJSON(ctx.Writer, http.StatusCreated, requestEvent), "failed to write result")
 }
 
 func (h *Handler) GetOrderById(ctx *gin.Context) {

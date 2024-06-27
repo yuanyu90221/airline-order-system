@@ -38,6 +38,7 @@ func (cache *CacheStore) CreateOrder(ctx context.Context, createOrderParam types
 		CurrentWait:      resultList[1],
 		CurrentWaitOrder: resultList[2],
 		IsValid:          resultList[3] == 1,
+		IsWait:           resultList[4] == 1,
 	}, nil
 }
 
@@ -89,13 +90,14 @@ end
 wait_order = tonumber(wait_order)
 request = tonumber(request)
 local is_valid = 1 
+local is_wait = 0
 if request < 0 then 
   is_valid = 0
-	return {total, wait, wait_order, is_valid}
+	return {total, wait, wait_order, is_valid, is_wait}
 end
 if request > total and request > wait then
   is_valid = 0
-	return {total, wait, wait_order, is_valid}
+	return {total, wait, wait_order, is_valid, is_wait}
 end
 if total + wait >= request and request > 0 then
   if total >= request then
@@ -103,12 +105,13 @@ if total + wait >= request and request > 0 then
 	elseif wait >= request then
 	  wait = wait - request
 		wait_order = wait_order + 1
+		is_wait = 1
 	end
 end
 redis.call("SET", total_key, total)
 redis.call("SET", wait_key, wait)
 redis.call("SET", wait_order_key, wait_order)
-return {total, wait, wait_order, is_valid}
+return {total, wait, wait_order, is_valid, is_wait}
 `)
 
 /*
