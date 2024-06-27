@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,7 +64,7 @@ type FlightStore interface {
 }
 
 type OrderStore interface {
-	CreateOrder(ctx context.Context) (Order, error)
+	CreateOrder(tx *sql.Tx, ctx context.Context) (Order, error)
 	GetOrderById(ctx context.Context) (Order, error)
 }
 type OrderCacheRequest struct {

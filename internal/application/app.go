@@ -31,10 +31,11 @@ func New(config *config.Config) *App {
 	if err != nil {
 		util.FailOnError(err, "failed to connect")
 	}
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     config.RedisAddr,
-		Password: config.RedisPassword,
-	})
+	opts, err := redis.ParseURL(config.RedisUrl)
+	if err != nil {
+		util.FailOnError(err, "failed to parse redis url")
+	}
+	rdb := redis.NewClient(opts)
 	app := &App{
 		rdb:     rdb,
 		config:  config,
