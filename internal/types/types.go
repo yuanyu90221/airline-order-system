@@ -12,7 +12,7 @@ type Flight struct {
 	ID             uuid.UUID `json:"id" db:"id"`
 	Departure      string    `json:"departure" db:"departure"`
 	Destination    string    `json:"destination" db:"destination"`
-	FlightDate     string    `json:"flight_date" db:"flight_date"`
+	FlightDate     time.Time `json:"flight_date" db:"flight_date"`
 	Price          float64   `json:"price" db:"price"`
 	AvailableSeats int32     `json:"available_seats" db:"available_seats"`
 	WaitSeats      int32     `json:"wait_seats" db:"wait_seats"`
@@ -73,6 +73,10 @@ type OrderCacheRequest struct {
 	CurrentWait      int64  `json:"current_wait" validate:"required"`
 	CurrentWaitOrder int64  `json:"current_wait_order" validate:"required"`
 }
+type CreateOrderRequest struct {
+	FlightID      string `json:"flight_id" validate:"required"`
+	TicketNumbers int64  `json:"ticket_numbers" validate:"required"`
+}
 type OrderCacheCreateRequest struct {
 	OrderCacheRequest
 	TicketNumbers int64 `json:"ticket_numbers" validate:"required"`
@@ -89,4 +93,9 @@ type OrderCacheRemain struct {
 type OrderCacheStore interface {
 	CreateOrder(ctx context.Context, createOrderParam OrderCacheCreateRequest) (OrderCacheResult, error)
 	GetCurrentRemain(ctx context.Context, getOrderRemain OrderCacheRequest) (OrderCacheRemain, error)
+}
+
+type FlightCacheStore interface {
+	UpdateFlight(ctx context.Context, flightInfo Flight) (Flight, error)
+	GetFlightCacheInfo(ctx context.Context, fligtID string) (Flight, error)
 }

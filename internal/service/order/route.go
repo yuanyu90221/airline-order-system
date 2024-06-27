@@ -14,14 +14,17 @@ import (
 )
 
 type Handler struct {
-	cacheStore types.OrderCacheStore
-	bFilter    bloomfilter.BloomFilter
+	orderCacheStore  types.OrderCacheStore
+	flightCacheStore types.FlightCacheStore
+	bFilter          bloomfilter.BloomFilter
 }
 
-func NewHandler(cacheStore types.OrderCacheStore, bFilter bloomfilter.BloomFilter) *Handler {
+func NewHandler(orderCacheStore types.OrderCacheStore, flightCacheStore types.FlightCacheStore,
+	bFilter bloomfilter.BloomFilter) *Handler {
 	return &Handler{
-		cacheStore: cacheStore,
-		bFilter:    bFilter,
+		orderCacheStore:  orderCacheStore,
+		flightCacheStore: flightCacheStore,
+		bFilter:          bFilter,
 	}
 }
 
@@ -31,7 +34,7 @@ func (h *Handler) RegisterRoute(router *gin.RouterGroup) {
 }
 
 func (h *Handler) CreateOrder(ctx *gin.Context) {
-	var requestOrder types.OrderCacheCreateRequest
+	var requestOrder types.CreateOrderRequest
 	// load input
 	if err := util.ParseJSON(ctx.Request, &requestOrder); err != nil {
 		util.WriteError(ctx.Writer, http.StatusBadRequest, err)
@@ -61,8 +64,22 @@ func (h *Handler) CreateOrder(ctx *gin.Context) {
 		util.WriteError(ctx.Writer, http.StatusBadRequest, fmt.Errorf("FlightID %s not in bloomfilter", requestOrder.FlightID))
 		return
 	}
+	flightInfo, err := h.flightCacheStore.GetFlightCacheInfo(ctx, requestOrder.FlightID)
+	if err != nil {
+		util.WriteError(ctx.Writer, http.StatusBadRequest, fmt.Errorf("FlightID %s not in flight cache %w", requestOrder.FlightID, err))
+		return
+	}
+	cacheRequest := types.OrderCacheRequest{
+		FlightID:         requestOrder.FlightID,
+		CurrentTotal:     int64(flightInfo.AvailableSeats),
+		CurrentWait:      int64(flightInfo.WaitSeats),
+		CurrentWaitOrder: int64(flightInfo.NextWaitOrder),
+	}
 	// create order from cache store
-	result, err := h.cacheStore.CreateOrder(ctx, requestOrder)
+	result, err := h.orderCacheStore.CreateOrder(ctx, types.OrderCacheCreateRequest{
+		OrderCacheRequest: cacheRequest,
+		TicketNumbers:     requestOrder.TicketNumbers,
+	})
 	if err != nil {
 		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("could not create order in cachestore: %w", err))
 		return

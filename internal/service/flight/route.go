@@ -16,16 +16,19 @@ import (
 )
 
 type Handler struct {
-	cacheStore  types.OrderCacheStore
-	flightStore types.FlightStore
-	bFilter     bloomfilter.BloomFilter
+	orderCacheStore  types.OrderCacheStore
+	flightCacheStore types.FlightCacheStore
+	flightStore      types.FlightStore
+	bFilter          bloomfilter.BloomFilter
 }
 
-func NewHandler(cacheStore types.OrderCacheStore, flightStore types.FlightStore, bFilter bloomfilter.BloomFilter) *Handler {
+func NewHandler(orderCacheStore types.OrderCacheStore, flightCacheStore types.FlightCacheStore,
+	flightStore types.FlightStore, bFilter bloomfilter.BloomFilter) *Handler {
 	return &Handler{
-		cacheStore:  cacheStore,
-		flightStore: flightStore,
-		bFilter:     bFilter,
+		orderCacheStore:  orderCacheStore,
+		flightCacheStore: flightCacheStore,
+		flightStore:      flightStore,
+		bFilter:          bFilter,
 	}
 }
 func (h *Handler) RegisterRoute(router *gin.RouterGroup) {
@@ -59,6 +62,11 @@ func (h *Handler) CreateFlight(ctx *gin.Context) {
 	}
 	if err := h.bFilter.Put(binaryUUID); err != nil {
 		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("bloom filter put err %w", err))
+		return
+	}
+	_, err = h.flightCacheStore.UpdateFlight(ctx, flight)
+	if err != nil {
+		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("failed to update flight err %w", err))
 		return
 	}
 	util.FailOnError(util.WriteJSON(ctx.Writer, http.StatusCreated, flight), "failed to response json")
