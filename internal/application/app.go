@@ -15,17 +15,19 @@ import (
 	"github.com/yuanyu90221/airline-order-system/internal/broker"
 	"github.com/yuanyu90221/airline-order-system/internal/config"
 	"github.com/yuanyu90221/airline-order-system/internal/db"
+	"github.com/yuanyu90221/airline-order-system/internal/types"
 	"github.com/yuanyu90221/airline-order-system/internal/util"
 )
 
 // define app dependency
 type App struct {
-	router  *gin.Engine
-	rdb     *redis.Client
-	config  *config.Config
-	db      *sql.DB
-	bFilter bloomfilter.BloomFilter
-	broker  *broker.Broker
+	router      *gin.Engine
+	rdb         *redis.Client
+	config      *config.Config
+	db          *sql.DB
+	bFilter     bloomfilter.BloomFilter
+	broker      *broker.Broker
+	orderWorker types.Worker
 }
 
 func New(config *config.Config) *App {
@@ -53,6 +55,7 @@ func New(config *config.Config) *App {
 	app.loadRoutes()
 	app.loadOrderRoutes()
 	app.loadFlightRoutes()
+	app.setupOrderWorker()
 	return app
 }
 
@@ -84,7 +87,14 @@ func (app *App) Start(ctx context.Context) error {
 		if err != nil {
 			errCh <- fmt.Errorf("failed to start server: %w", err)
 		}
-		close(errCh)
+		util.CloseChannel(errCh)
+	}()
+	go func() {
+		err = app.orderWorker.Run(ctx)
+		if err != nil {
+			errCh <- fmt.Errorf("failed to run worker: %w", err)
+		}
+		util.CloseChannel(errCh)
 	}()
 	select {
 	case err = <-errCh:

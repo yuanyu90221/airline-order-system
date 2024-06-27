@@ -22,13 +22,13 @@ type Flight struct {
 }
 
 type Order struct {
-	ID            uuid.UUID `json:"id" db:"id"`
-	FlightID      uuid.UUID `json:"flight_id" db:"flight_id"`
-	CreatedAt     time.Time `json:"created_at" db:"created_at"`
-	CanceledAt    time.Time `json:"canceled_at,omitempty" db:"canceled_at"`
-	PaidAt        time.Time `json:"paid_at,omitempty" db:"paid_at"`
-	WaitOrder     int32     `json:"wait_order,omitempty" db:"wait_order"`
-	TicketNumbers int32     `json:"ticket_numbers" db:"ticket_numbers"`
+	ID            uuid.UUID    `json:"id" db:"id"`
+	FlightID      uuid.UUID    `json:"flight_id" db:"flight_id"`
+	CreatedAt     time.Time    `json:"created_at" db:"created_at"`
+	CanceledAt    sql.NullTime `json:"canceled_at,omitempty" db:"canceled_at"`
+	PaidAt        sql.NullTime `json:"paid_at,omitempty" db:"paid_at"`
+	WaitOrder     int32        `json:"wait_order,omitempty" db:"wait_order"`
+	TicketNumbers int32        `json:"ticket_numbers" db:"ticket_numbers"`
 }
 
 type QueryFlightParams struct {
@@ -121,4 +121,15 @@ type CreateOrderEvent struct {
 	AvailableSeats int64  `json:"available_seats"`
 	TicketNumbers  int64  `json:"ticket_numbers"`
 	IsWait         bool   `json:"is_wait"`
+}
+
+type OrderServcie interface {
+	CreateOrderHandler(ctx context.Context,
+		createOrderParams CreateOrderEntityRequest,
+		updateFlightParams UpdateFlightEntityRequest,
+	) (Flight, Order, error)
+}
+
+type Worker interface {
+	Run(ctx context.Context) error
 }

@@ -35,6 +35,18 @@ func (broker *Broker) HandleConnectCh() error {
 	broker.ch = ch
 	return nil
 }
+func (broker *Broker) GenerateDeliveryChannel(ctx context.Context, qName string) (<-chan amqp.Delivery, error) {
+	if broker.ch.IsClosed() {
+		if err := broker.HandleConnectCh(); err != nil {
+			return nil, err
+		}
+	}
+	msgch, err := broker.ch.ConsumeWithContext(ctx, qName, "", false, false, false, false, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to consume queue %s %w", qName, err)
+	}
+	return msgch, err
+}
 func (broker *Broker) SendMessageToQueue(ctx context.Context, qName string, data []byte) error {
 	if broker.ch.IsClosed() {
 		if err := broker.HandleConnectCh(); err != nil {

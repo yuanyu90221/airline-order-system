@@ -152,7 +152,7 @@ func (flightStore *FlightStore) UpdateFlight(tx *sql.Tx, ctx context.Context,
 	updatedAt := time.Now().UTC()
 	queryBuilder := sq.Update("flights").Set("available_seats", updateFlightParams.AvailableSeats)
 	queryBuilder = queryBuilder.Set("wait_seats", updateFlightParams.WaitSeats)
-	queryBuilder = queryBuilder.Set("wait_next_order", updateFlightParams.NextWaitOrder)
+	queryBuilder = queryBuilder.Set("next_wait_order", updateFlightParams.NextWaitOrder)
 	queryBuilder = queryBuilder.Set("updated_at", updatedAt)
 	queryBuilder = queryBuilder.Where(sq.Eq{"id": updateFlightParams.ID}).Suffix("RETURNING *;")
 	queryBuilder = queryBuilder.PlaceholderFormat(sq.Dollar)
@@ -167,9 +167,9 @@ func (flightStore *FlightStore) UpdateFlight(tx *sql.Tx, ctx context.Context,
 	var flight types.Flight
 	if rows.Next() {
 		err = rows.Scan(&flight.ID,
-			&flight.Price,
 			&flight.Departure,
 			&flight.Destination,
+			&flight.Price,
 			&flight.FlightDate,
 			&flight.AvailableSeats,
 			&flight.WaitSeats,

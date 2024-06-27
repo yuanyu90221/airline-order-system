@@ -48,3 +48,9 @@ func ParseFlightIDIntoBinary(flightID string) ([]byte, int, error) {
 	}
 	return binaryFlightID, 0, nil
 }
+
+func CloseChannel(ch chan error) {
+	if _, ok := <-ch; ok {
+		close(ch)
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/yuanyu90221/airline-order-system/internal/types"
 )
@@ -32,8 +33,10 @@ func (orderService *OrderService) CreateOrderHandler(ctx context.Context,
 	if err != nil {
 		return types.Flight{}, types.Order{}, fmt.Errorf("create db tx failed %w", err)
 	}
+	log.Println(createOrderParams, updateFlightParams)
 	order, err := orderService.orderStore.CreateOrder(tx, ctx, createOrderParams)
 	if err != nil {
+		log.Printf("failed to create order %v", err)
 		err = tx.Rollback()
 		if err != nil {
 			return types.Flight{}, types.Order{}, fmt.Errorf("tx roolback failed %w", err)
@@ -42,6 +45,7 @@ func (orderService *OrderService) CreateOrderHandler(ctx context.Context,
 	}
 	flight, err := orderService.flightStore.UpdateFlight(tx, ctx, updateFlightParams)
 	if err != nil {
+		log.Printf("failed to create order %v", err)
 		err = tx.Rollback()
 		if err != nil {
 			return types.Flight{}, types.Order{}, fmt.Errorf("tx roolback failed %w", err)

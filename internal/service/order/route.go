@@ -102,6 +102,7 @@ func (h *Handler) CreateOrder(ctx *gin.Context) {
 		WaitSeats:      result.CurrentWait,
 		IsWait:         result.IsWait,
 	}
+
 	data, err := json.Marshal(requestEvent)
 	if err != nil {
 		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("marshal data error %w", err))
@@ -112,7 +113,7 @@ func (h *Handler) CreateOrder(ctx *gin.Context) {
 		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("send rabbitmq error %w", err))
 		return
 	}
-	if result.IsWait {
+	if !result.IsWait {
 		requestEvent.WaitOrder = -1
 	}
 	util.FailOnError(util.WriteJSON(ctx.Writer, http.StatusCreated, requestEvent), "failed to write result")
