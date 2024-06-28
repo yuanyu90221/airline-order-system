@@ -22,7 +22,7 @@ func NewFlightStore(db *sql.DB) *FlightStore {
 	}
 }
 
-func (flightStore *FlightStore) CreateFlight(ctx context.Context, createParams types.CreateFlightParams) (types.Flight, error) {
+func (flightStore *FlightStore) CreateFlight(ctx context.Context, createParams types.CreateFlightRequest) (types.Flight, error) {
 	// generate uuid
 	flightID := uuid.New()
 	queryBuilder, err := flightStore.db.Prepare("INSERT INTO flights(id,price,destination,departure,available_seats, wait_seats,flight_date) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *;")
@@ -42,7 +42,7 @@ func (flightStore *FlightStore) CreateFlight(ctx context.Context, createParams t
 }
 
 func (flightStore *FlightStore) GetFlightsByCriteria(ctx context.Context,
-	queryParams types.QueryFlightParams,
+	queryParams types.QueryFlightRequest,
 	pageInfo types.Pagination) (types.FlightFetchResult, error) {
 	// original sql
 	queryBuilder := sq.Select("id", "price", "departure", "destination", "flight_date", "available_seats", "wait_seats", "next_wait_order", "created_at", "updated_at").From("flights").PlaceholderFormat(sq.Dollar)

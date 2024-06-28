@@ -37,7 +37,7 @@ func (h *Handler) RegisterRoute(router *gin.RouterGroup) {
 	router.GET("/:id", h.GetFlightById)
 }
 func (h *Handler) CreateFlight(ctx *gin.Context) {
-	var createFlight types.CreateFlightParams
+	var createFlight types.CreateFlightRequest
 	if err := util.ParseJSON(ctx.Request, &createFlight); err != nil {
 		util.WriteError(ctx.Writer, http.StatusBadRequest, err)
 		return
@@ -95,7 +95,7 @@ func (h *Handler) GetFlightsByCriteria(ctx *gin.Context) {
 		}
 		pagination.Offset = offset
 	}
-	var queryParams types.QueryFlightParams
+	var queryParams types.QueryFlightRequest
 	if query.Has("flignt_date") {
 		flignt_date, err := strconv.ParseInt(query.Get("flignt_date"), 10, 64)
 		if err != nil {

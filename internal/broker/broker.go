@@ -41,9 +41,13 @@ func (broker *Broker) GenerateDeliveryChannel(ctx context.Context, qName string)
 			return nil, err
 		}
 	}
-	msgch, err := broker.ch.ConsumeWithContext(ctx, qName, "", false, false, false, false, nil)
+	queue, err := broker.ch.QueueDeclare(qName, false, false, false, false, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to consume queue %s %w", qName, err)
+		return nil, fmt.Errorf("declare queue failed with %s %w", qName, err)
+	}
+	msgch, err := broker.ch.ConsumeWithContext(ctx, queue.Name, "", false, false, false, false, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to consume queue %s %w", queue.Name, err)
 	}
 	return msgch, err
 }
