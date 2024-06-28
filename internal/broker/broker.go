@@ -3,7 +3,6 @@ package broker
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -47,6 +46,12 @@ func NewBroker(uri string) (*Broker, error) {
 	}, nil
 }
 func (broker *Broker) HandlePublisherReconnect() error {
+	if broker.publisher_conn != nil {
+		err := broker.publisher_conn.Close()
+		if err != nil {
+			return err
+		}
+	}
 	conn, err := amqp.DialConfig(broker.uri, amqp.Config{
 		Properties: map[string]interface{}{"connection_name": "publisher"},
 	})
@@ -57,7 +62,7 @@ func (broker *Broker) HandlePublisherReconnect() error {
 	return nil
 }
 func (broker *Broker) HandlePublisherConnectCh() error {
-	if broker.publisher_conn.IsClosed() {
+	if broker.publisher_conn == nil || broker.publisher_conn.IsClosed() {
 		if err := broker.HandlePublisherReconnect(); err != nil {
 			return err
 		}
@@ -70,6 +75,12 @@ func (broker *Broker) HandlePublisherConnectCh() error {
 	return nil
 }
 func (broker *Broker) HandleConsumerReconnect() error {
+	if broker.consumer_conn != nil {
+		err := broker.consumer_conn.Close()
+		if err != nil {
+			return err
+		}
+	}
 	conn, err := amqp.DialConfig(broker.uri, amqp.Config{
 		Properties: map[string]interface{}{"connection_name": "consumer"},
 	})
@@ -80,7 +91,7 @@ func (broker *Broker) HandleConsumerReconnect() error {
 	return nil
 }
 func (broker *Broker) HandleConsumerConnectCh() error {
-	if broker.consumer_conn.IsClosed() {
+	if broker.consumer_conn == nil || broker.consumer_conn.IsClosed() {
 		if err := broker.HandleConsumerReconnect(); err != nil {
 			return err
 		}
@@ -109,11 +120,6 @@ func (broker *Broker) ConsumerClose() error {
 }
 func (broker *Broker) GenerateDeliveryChannel(ctx context.Context, qName string) (<-chan amqp.Delivery, error) {
 	if broker.consumer_ch == nil || broker.consumer_ch.IsClosed() {
-		err := broker.ConsumerClose()
-		if err != nil {
-			log.Println("connect failed", err)
-			return nil, err
-		}
 		if err := broker.HandleConsumerConnectCh(); err != nil {
 			return nil, err
 		}
@@ -130,11 +136,6 @@ func (broker *Broker) GenerateDeliveryChannel(ctx context.Context, qName string)
 }
 func (broker *Broker) SendMessageToQueue(ctx context.Context, qName string, data []byte) error {
 	if broker.publisher_ch == nil || broker.publisher_ch.IsClosed() {
-		err := broker.PublisherClose()
-		if err != nil {
-			log.Println("connect failed", err)
-			return err
-		}
 		if err := broker.HandlePublisherConnectCh(); err != nil {
 			return err
 		}
