@@ -77,16 +77,16 @@ func (h *Handler) CreateOrder(ctx *gin.Context) {
 		util.WriteError(ctx.Writer, http.StatusBadRequest, fmt.Errorf("FlightID %s not in flight cache %w", requestOrder.FlightID, err))
 		return
 	}
-	cacheRequest := types.OrderCacheRequest{
+	cacheRequest := types.OrderCacheParam{
 		FlightID:         requestOrder.FlightID,
 		CurrentTotal:     int64(flightInfo.AvailableSeats),
 		CurrentWait:      int64(flightInfo.WaitSeats),
 		CurrentWaitOrder: int64(flightInfo.NextWaitOrder),
 	}
 	// create order from cache store
-	result, err := h.orderCacheStore.CreateOrder(ctx, types.OrderCacheCreateRequest{
-		OrderCacheRequest: cacheRequest,
-		TicketNumbers:     requestOrder.TicketNumbers,
+	result, err := h.orderCacheStore.CreateOrder(ctx, types.OrderCacheCreateParam{
+		OrderCacheParam: cacheRequest,
+		TicketNumbers:   requestOrder.TicketNumbers,
 	})
 	if err != nil {
 		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("could not create order in cachestore: %w", err))
@@ -96,8 +96,11 @@ func (h *Handler) CreateOrder(ctx *gin.Context) {
 		util.WriteError(ctx.Writer, http.StatusBadRequest, fmt.Errorf(`seats insufficient, could not create order with request ticket numbers: %d , with available seats %d, wait seats %d `, requestOrder.TicketNumbers, result.CurrentTotal, result.CurrentWait))
 		return
 	}
+	// generate order id
+	id := uuid.New()
 	// update result to rabbitmq
 	requestEvent := types.CreateOrderEvent{
+		ID:             id.String(),
 		FlightID:       requestOrder.FlightID,
 		TicketNumbers:  requestOrder.TicketNumbers,
 		AvailableSeats: result.CurrentTotal,
@@ -116,10 +119,8 @@ func (h *Handler) CreateOrder(ctx *gin.Context) {
 		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("send rabbitmq error %w", err))
 		return
 	}
-	if !result.IsWait {
-		requestEvent.WaitOrder = -1
-	}
-	util.FailOnError(util.WriteJSON(ctx.Writer, http.StatusCreated, requestEvent), "failed to write result")
+	util.FailOnError(util.WriteJSON(ctx.Writer, http.StatusCreated,
+		types.ConvertCreateOrderEventToResponse(requestEvent)), "failed to write result")
 }
 
 func (h *Handler) GetOrderById(ctx *gin.Context) {
@@ -138,5 +139,5 @@ func (h *Handler) GetOrderById(ctx *gin.Context) {
 		util.WriteError(ctx.Writer, http.StatusInternalServerError, fmt.Errorf("failed to get order %w", err))
 		return
 	}
-	util.FailOnError(util.WriteJSON(ctx.Writer, http.StatusOK, result), "failed to response json")
+	util.FailOnError(util.WriteJSON(ctx.Writer, http.StatusOK, types.ConvertOrderEntityToResponse(result)), "failed to response json")
 }

@@ -18,10 +18,8 @@ type OrderStore struct {
 func NewOrderStore(db *sql.DB) *OrderStore {
 	return &OrderStore{db: db}
 }
-func (orderStore *OrderStore) CreateOrder(tx *sql.Tx, ctx context.Context, createOrderParam types.CreateOrderEntityRequest) (types.Order, error) {
-	// create order id
-	orderID := uuid.New()
-	queryBuilder := sq.Insert("orders").Columns("id", "flight_id", "wait_order", "ticket_numbers").Values(orderID,
+func (orderStore *OrderStore) CreateOrder(tx *sql.Tx, ctx context.Context, createOrderParam types.CreateOrderEntityParam) (types.Order, error) {
+	queryBuilder := sq.Insert("orders").Columns("id", "flight_id", "wait_order", "ticket_numbers").Values(createOrderParam.ID,
 		createOrderParam.FlightID, createOrderParam.WaitOrder, createOrderParam.TicketNumbers).Suffix("RETURNING *;").PlaceholderFormat(sq.Dollar)
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {

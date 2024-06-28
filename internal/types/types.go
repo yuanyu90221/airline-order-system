@@ -1,73 +1,37 @@
 package types
 
 import (
-	"database/sql"
-	"time"
-
 	"github.com/google/uuid"
 )
-
-type Flight struct {
-	ID             uuid.UUID `json:"id" db:"id"`
-	Departure      string    `json:"departure" db:"departure"`
-	Destination    string    `json:"destination" db:"destination"`
-	FlightDate     time.Time `json:"flight_date" db:"flight_date"`
-	Price          float64   `json:"price" db:"price"`
-	AvailableSeats int32     `json:"available_seats" db:"available_seats"`
-	WaitSeats      int32     `json:"wait_seats" db:"wait_seats"`
-	NextWaitOrder  int32     `json:"next_wait_order" db:"next_wait_order"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
-}
-
-type Order struct {
-	ID            uuid.UUID    `json:"id" db:"id"`
-	FlightID      uuid.UUID    `json:"flight_id" db:"flight_id"`
-	CreatedAt     time.Time    `json:"created_at" db:"created_at"`
-	CanceledAt    sql.NullTime `json:"canceled_at,omitempty" db:"canceled_at"`
-	PaidAt        sql.NullTime `json:"paid_at,omitempty" db:"paid_at"`
-	WaitOrder     int32        `json:"wait_order,omitempty" db:"wait_order"`
-	TicketNumbers int32        `json:"ticket_numbers" db:"ticket_numbers"`
-}
 
 type Pagination struct {
 	NextOffset int64 `json:"next_offset"`
 	Offset     int64 `json:"offset"`
 	Limit      int64 `json:"limit"`
 }
-type FlightResponse struct {
-	Flight
-	Remain int `json:"remain"`
-}
-type FlightFetchResult struct {
-	Flights []FlightResponse `json:"flights"`
-	Pagination
-}
 
-type UpdateFlightEntityRequest struct {
+type UpdateFlightEntityParam struct {
 	ID             uuid.UUID `json:"id" db:"id"`
 	AvailableSeats int32     `json:"available_seats" db:"available_seats"`
 	WaitSeats      int32     `json:"wait_seats" db:"wait_seats"`
 	NextWaitOrder  int32     `json:"next_wait_order" db:"next_wait_order"`
 }
 
-type CreateOrderEntityRequest struct {
+type CreateOrderEntityParam struct {
+	ID            uuid.UUID `json:"id" db:"id"`
 	FlightID      uuid.UUID `json:"flight_id" db:"flight_id"`
 	WaitOrder     int32     `json:"wait_order,omitempty" db:"wait_order"`
 	TicketNumbers int32     `json:"ticket_numbers" db:"ticket_numbers"`
 }
-type OrderCacheRequest struct {
+type OrderCacheParam struct {
 	FlightID         string `json:"flight_id" validate:"required"`
 	CurrentTotal     int64  `json:"current_total" validate:"required"`
 	CurrentWait      int64  `json:"current_wait" validate:"required"`
 	CurrentWaitOrder int64  `json:"current_wait_order" validate:"required"`
 }
-type CreateOrderRequest struct {
-	FlightID      string `json:"flight_id" validate:"required"`
-	TicketNumbers int64  `json:"ticket_numbers" validate:"required"`
-}
-type OrderCacheCreateRequest struct {
-	OrderCacheRequest
+
+type OrderCacheCreateParam struct {
+	OrderCacheParam
 	TicketNumbers int64 `json:"ticket_numbers" validate:"required"`
 }
 type OrderCacheResult struct {

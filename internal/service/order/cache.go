@@ -22,7 +22,7 @@ func NewCacheStore(rdb *redis.Client) *CacheStore {
 *
 CreateOrder: create order with flight_id
 */
-func (cache *CacheStore) CreateOrder(ctx context.Context, createOrderParam types.OrderCacheCreateRequest,
+func (cache *CacheStore) CreateOrder(ctx context.Context, createOrderParam types.OrderCacheCreateParam,
 ) (types.OrderCacheResult, error) {
 	result := CreateOrderWithFlightID.Run(ctx, cache.rdb, []string{createOrderParam.FlightID},
 		createOrderParam.TicketNumbers,
@@ -46,7 +46,7 @@ func (cache *CacheStore) CreateOrder(ctx context.Context, createOrderParam types
 *
 GetCurrentRemain: get current flight_id remain
 */
-func (cache *CacheStore) GetCurrentRemain(ctx context.Context, getRemainParam types.OrderCacheRequest) (types.OrderCacheRemain, error) {
+func (cache *CacheStore) GetCurrentRemain(ctx context.Context, getRemainParam types.OrderCacheParam) (types.OrderCacheRemain, error) {
 	result := GetCurrentRemainWithFlightID.Run(ctx, cache.rdb, []string{getRemainParam.FlightID},
 		getRemainParam.CurrentTotal, getRemainParam.CurrentWait, getRemainParam.CurrentWaitOrder)
 	remain, err := result.Int64()

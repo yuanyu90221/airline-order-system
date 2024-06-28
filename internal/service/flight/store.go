@@ -43,7 +43,7 @@ func (flightStore *FlightStore) CreateFlight(ctx context.Context, createParams t
 
 func (flightStore *FlightStore) GetFlightsByCriteria(ctx context.Context,
 	queryParams types.QueryFlightRequest,
-	pageInfo types.Pagination) (types.FlightFetchResult, error) {
+	pageInfo types.Pagination) (types.FlightsFetchResponse, error) {
 	// original sql
 	queryBuilder := sq.Select("id", "price", "departure", "destination", "flight_date", "available_seats", "wait_seats", "next_wait_order", "created_at", "updated_at").From("flights").PlaceholderFormat(sq.Dollar)
 	// fligt_date >= time.Now()
@@ -73,13 +73,13 @@ func (flightStore *FlightStore) GetFlightsByCriteria(ctx context.Context,
 
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		return types.FlightFetchResult{}, err
+		return types.FlightsFetchResponse{}, err
 	}
 	rows, err := flightStore.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return types.FlightFetchResult{}, err
+		return types.FlightsFetchResponse{}, err
 	}
-	result := types.FlightFetchResult{}
+	result := types.FlightsFetchResponse{}
 	for rows.Next() {
 		var flight types.Flight
 		err = rows.Scan(&flight.ID,
@@ -94,13 +94,9 @@ func (flightStore *FlightStore) GetFlightsByCriteria(ctx context.Context,
 			&flight.UpdatedAt,
 		)
 		if err != nil {
-			return types.FlightFetchResult{}, err
+			return types.FlightsFetchResponse{}, err
 		}
-
-		result.Flights = append(result.Flights, types.FlightResponse{
-			Flight: flight,
-			Remain: int(flight.AvailableSeats) + int(flight.WaitSeats),
-		})
+		result.Flights = append(result.Flights, types.ConvertFlightToRespone(flight))
 	}
 	result.Limit = pageInfo.Limit
 	result.Offset = pageInfo.Offset
@@ -141,14 +137,13 @@ func (flightStore *FlightStore) GetFlightById(ctx context.Context, flightID uuid
 		if err != nil {
 			return types.FlightResponse{}, err
 		}
-		result.Flight = flight
-		result.Remain = int(flight.AvailableSeats) + int(flight.WaitSeats)
+		result = types.ConvertFlightToRespone(flight)
 	}
 	return result, nil
 }
 
 func (flightStore *FlightStore) UpdateFlight(tx *sql.Tx, ctx context.Context,
-	updateFlightParams types.UpdateFlightEntityRequest) (types.Flight, error) {
+	updateFlightParams types.UpdateFlightEntityParam) (types.Flight, error) {
 	updatedAt := time.Now().UTC()
 	queryBuilder := sq.Update("flights").Set("available_seats", updateFlightParams.AvailableSeats)
 	queryBuilder = queryBuilder.Set("wait_seats", updateFlightParams.WaitSeats)

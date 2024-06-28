@@ -47,13 +47,19 @@ func (orderWorker *OrderWorker) Run(ctx context.Context) error {
 			log.Println("parse flightID failed:", err)
 			continue
 		}
-		createOrderParam := types.CreateOrderEntityRequest{
+		ID, err := uuid.Parse(createOrderEvent.ID)
+		if err != nil {
+			log.Println("parse flightID failed:", err)
+			continue
+		}
+		createOrderParam := types.CreateOrderEntityParam{
+			ID:            ID,
 			FlightID:      flightID,
 			WaitOrder:     int32(createOrderEvent.WaitOrder),
 			TicketNumbers: int32(createOrderEvent.TicketNumbers),
 		}
 
-		updateFlightParams := types.UpdateFlightEntityRequest{
+		updateFlightParams := types.UpdateFlightEntityParam{
 			ID:             flightID,
 			AvailableSeats: int32(createOrderEvent.AvailableSeats),
 			WaitSeats:      int32(createOrderEvent.WaitSeats),

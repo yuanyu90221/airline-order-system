@@ -4,7 +4,7 @@ import "context"
 
 type OrderServcie interface {
 	CreateOrderHandler(ctx context.Context,
-		createOrderParams CreateOrderEntityRequest,
-		updateFlightParams UpdateFlightEntityRequest,
+		createOrderParam CreateOrderEntityParam,
+		updateFlightParam UpdateFlightEntityParam,
 	) (Flight, Order, error)
 }

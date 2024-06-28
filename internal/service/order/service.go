@@ -25,8 +25,8 @@ func NewOrderService(db *sql.DB, orderStore types.OrderStore, flightStore types.
 }
 
 func (orderService *OrderService) CreateOrderHandler(ctx context.Context,
-	createOrderParams types.CreateOrderEntityRequest,
-	updateFlightParams types.UpdateFlightEntityRequest,
+	createOrderParams types.CreateOrderEntityParam,
+	updateFlightParams types.UpdateFlightEntityParam,
 ) (types.Flight, types.Order, error) {
 	// create db transaction
 	tx, err := orderService.db.BeginTx(ctx, nil)

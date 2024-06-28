@@ -1,6 +1,7 @@
 package types
 
 type CreateOrderEvent struct {
+	ID             string `json:"id"`
 	FlightID       string `json:"flight_id"`
 	WaitOrder      int64  `json:"wait_order"`
 	WaitSeats      int64  `json:"wait_seats"`
