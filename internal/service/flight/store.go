@@ -48,7 +48,7 @@ func (flightStore *FlightStore) GetFlightsByCriteria(ctx context.Context,
 	queryBuilder := sq.Select("id", "price", "departure", "destination", "flight_date", "available_seats", "wait_seats", "next_wait_order", "created_at", "updated_at").From("flights").PlaceholderFormat(sq.Dollar)
 	// fligt_date >= time.Now()
 	whereCondition := []sq.Sqlizer{sq.GtOrEq{"flight_date": time.Now().UTC()},
-		sq.NotEq{"available_seats": 0}, sq.NotEq{"wait_seats": 0}}
+		sq.Or{sq.NotEq{"available_seats": 0}, sq.NotEq{"wait_seats": 0}}}
 	// Parse parameters
 	if queryParams.FlightDate > 0 {
 		whereCondition = append(whereCondition, sq.GtOrEq{"flight_date": time.Unix(queryParams.FlightDate, 0)})

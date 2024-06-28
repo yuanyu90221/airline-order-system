@@ -29,12 +29,12 @@ func NewOrderWorker(orderService types.OrderServcie, flightCacheStore types.Flig
 
 func (orderWorker *OrderWorker) Run(ctx context.Context) error {
 	msgch, err := orderWorker.mq.GenerateDeliveryChannel(ctx, config.AppConfig.OrderQueueName)
+	log.Println("worker start")
 	if err != nil {
 		return err
 	}
 	for msg := range msgch {
 		data := msg.Body
-		msg.Ack(true)
 		var createOrderEvent types.CreateOrderEvent
 		err := json.Unmarshal(data, &createOrderEvent)
 		if err != nil {
@@ -77,6 +77,7 @@ func (orderWorker *OrderWorker) Run(ctx context.Context) error {
 		}
 		log.Printf("finish update flight: %v\n order: %v\n", flight, order)
 	}
+	log.Println("worker end")
 	<-ctx.Done()
 	return nil
 }

@@ -3,68 +3,138 @@ package broker
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type Broker struct {
-	conn *amqp.Connection
-	ch   *amqp.Channel
+	uri            string
+	consumer_conn  *amqp.Connection
+	publisher_conn *amqp.Connection
+	consumer_ch    *amqp.Channel
+	publisher_ch   *amqp.Channel
 }
 
 func NewBroker(uri string) (*Broker, error) {
-	conn, err := amqp.Dial(uri)
+	consumer_conn, err := amqp.Dial(uri)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect rabbitmq with %s %w", uri, err)
+		return nil, fmt.Errorf("failed to connect consumer rabbitmq with %s %w", uri, err)
 	}
-	ch, err := conn.Channel()
+	consumer_ch, err := consumer_conn.Channel()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create channel with %s %w", uri, err)
+		return nil, fmt.Errorf("failed to create consumer channel with %s %w", uri, err)
+	}
+	publisher_conn, err := amqp.Dial(uri)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect publisher rabbitmq with %s %w", uri, err)
+	}
+	publisher_ch, err := publisher_conn.Channel()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create publisher channel with %s %w", uri, err)
 	}
 	return &Broker{
-		conn: conn,
-		ch:   ch,
+		uri:            uri,
+		consumer_conn:  consumer_conn,
+		consumer_ch:    consumer_ch,
+		publisher_conn: publisher_conn,
+		publisher_ch:   publisher_ch,
 	}, nil
 }
-func (broker *Broker) HandleConnectCh() error {
-	ch, err := broker.conn.Channel()
+func (broker *Broker) HandlePublisherReconnect() error {
+	conn, err := amqp.Dial(broker.uri)
+	if err != nil {
+		return fmt.Errorf("handle connect failed %w", err)
+	}
+	broker.publisher_conn = conn
+	return nil
+}
+func (broker *Broker) HandlePublisherConnectCh() error {
+	if broker.publisher_conn.IsClosed() {
+		if err := broker.HandlePublisherReconnect(); err != nil {
+			return err
+		}
+	}
+	ch, err := broker.publisher_conn.Channel()
 	if err != nil {
 		return fmt.Errorf("handle connect ch failed %w", err)
 	}
-	broker.ch = ch
+	broker.publisher_ch = ch
+	return nil
+}
+func (broker *Broker) HandleConsumerReconnect() error {
+	conn, err := amqp.Dial(broker.uri)
+	if err != nil {
+		return fmt.Errorf("handle connect failed %w", err)
+	}
+	broker.consumer_conn = conn
+	return nil
+}
+func (broker *Broker) HandleConsumerConnectCh() error {
+	if broker.consumer_conn.IsClosed() {
+		if err := broker.HandleConsumerReconnect(); err != nil {
+			return err
+		}
+	}
+	ch, err := broker.consumer_conn.Channel()
+	if err != nil {
+		return fmt.Errorf("handle connect ch failed %w", err)
+	}
+	broker.consumer_ch = ch
+	return nil
+}
+func (broker *Broker) ConsumerClose() error {
+	if broker.consumer_ch != nil && !broker.consumer_ch.IsClosed() {
+		return broker.consumer_ch.Close()
+	}
+	if broker.consumer_conn != nil && !broker.consumer_conn.IsClosed() {
+		return broker.consumer_conn.Close()
+	}
+	broker.consumer_ch = nil
+	broker.consumer_conn = nil
 	return nil
 }
 func (broker *Broker) GenerateDeliveryChannel(ctx context.Context, qName string) (<-chan amqp.Delivery, error) {
-	if broker.ch.IsClosed() {
-		if err := broker.HandleConnectCh(); err != nil {
+	if broker.consumer_ch.IsClosed() {
+		err := broker.ConsumerClose()
+		if err != nil {
+			log.Println("connect failed", err)
+			return nil, err
+		}
+		if err := broker.HandleConsumerConnectCh(); err != nil {
 			return nil, err
 		}
 	}
-	queue, err := broker.ch.QueueDeclare(qName, false, false, false, false, nil)
+	queue, err := broker.consumer_ch.QueueDeclare(qName, false, false, false, false, nil)
 	if err != nil {
 		return nil, fmt.Errorf("declare queue failed with %s %w", qName, err)
 	}
-	msgch, err := broker.ch.ConsumeWithContext(ctx, queue.Name, "", false, false, false, false, nil)
+	msgch, err := broker.consumer_ch.ConsumeWithContext(ctx, queue.Name, "", true, false, false, false, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to consume queue %s %w", queue.Name, err)
 	}
 	return msgch, err
 }
 func (broker *Broker) SendMessageToQueue(ctx context.Context, qName string, data []byte) error {
-	if broker.ch.IsClosed() {
-		if err := broker.HandleConnectCh(); err != nil {
+	if broker.publisher_ch.IsClosed() {
+		err := broker.PublisherClose()
+		if err != nil {
+			log.Println("connect failed", err)
+			return err
+		}
+		if err := broker.HandlePublisherConnectCh(); err != nil {
 			return err
 		}
 	}
-	queue, err := broker.ch.QueueDeclare(qName, false, false, false, false, nil)
+	queue, err := broker.publisher_ch.QueueDeclare(qName, false, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("declare queue failed with %s %w", qName, err)
 	}
 	// setup timeout for send queue
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	err = broker.ch.PublishWithContext(
+	err = broker.publisher_ch.PublishWithContext(
 		ctx,
 		"",
 		queue.Name,
@@ -80,14 +150,25 @@ func (broker *Broker) SendMessageToQueue(ctx context.Context, qName string, data
 	}
 	return nil
 }
+func (broker *Broker) PublisherClose() error {
+	if broker.publisher_ch != nil && !broker.publisher_ch.IsClosed() {
+		return broker.publisher_ch.Close()
+	}
+	if broker.publisher_conn != nil && !broker.publisher_conn.IsClosed() {
+		return broker.publisher_conn.Close()
+	}
+	broker.publisher_ch = nil
+	broker.publisher_conn = nil
+	return nil
+}
 func (broker *Broker) Close() error {
-	if broker.ch != nil && !broker.ch.IsClosed() {
-		return broker.ch.Close()
+	err := broker.PublisherClose()
+	if err != nil {
+		return err
 	}
-	if broker.conn != nil && !broker.conn.IsClosed() {
-		return broker.conn.Close()
+	err = broker.ConsumerClose()
+	if err != nil {
+		return err
 	}
-	broker.ch = nil
-	broker.conn = nil
 	return nil
 }

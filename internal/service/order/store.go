@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
@@ -23,10 +24,12 @@ func (orderStore *OrderStore) CreateOrder(tx *sql.Tx, ctx context.Context, creat
 		createOrderParam.FlightID, createOrderParam.WaitOrder, createOrderParam.TicketNumbers).Suffix("RETURNING *;").PlaceholderFormat(sq.Dollar)
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
+		log.Println(err)
 		return types.Order{}, fmt.Errorf("create order query builder failed %w", err)
 	}
 	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
+		log.Println(err)
 		return types.Order{}, fmt.Errorf("insert order failed %w", err)
 	}
 	var resultOrder types.Order
@@ -41,6 +44,7 @@ func (orderStore *OrderStore) CreateOrder(tx *sql.Tx, ctx context.Context, creat
 			&resultOrder.TicketNumbers,
 		)
 		if err != nil {
+			log.Println(err)
 			return types.Order{}, fmt.Errorf("scan order failed %w", err)
 		}
 	}
