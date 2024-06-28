@@ -18,7 +18,9 @@ type Broker struct {
 }
 
 func NewBroker(uri string) (*Broker, error) {
-	consumer_conn, err := amqp.Dial(uri)
+	consumer_conn, err := amqp.DialConfig(uri, amqp.Config{
+		Properties: map[string]interface{}{"connection_name": "consumer"},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect consumer rabbitmq with %s %w", uri, err)
 	}
@@ -26,7 +28,9 @@ func NewBroker(uri string) (*Broker, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create consumer channel with %s %w", uri, err)
 	}
-	publisher_conn, err := amqp.Dial(uri)
+	publisher_conn, err := amqp.DialConfig(uri, amqp.Config{
+		Properties: map[string]interface{}{"connection_name": "publisher"},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect publisher rabbitmq with %s %w", uri, err)
 	}
@@ -43,7 +47,9 @@ func NewBroker(uri string) (*Broker, error) {
 	}, nil
 }
 func (broker *Broker) HandlePublisherReconnect() error {
-	conn, err := amqp.Dial(broker.uri)
+	conn, err := amqp.DialConfig(broker.uri, amqp.Config{
+		Properties: map[string]interface{}{"connection_name": "publisher"},
+	})
 	if err != nil {
 		return fmt.Errorf("handle connect failed %w", err)
 	}
@@ -64,7 +70,9 @@ func (broker *Broker) HandlePublisherConnectCh() error {
 	return nil
 }
 func (broker *Broker) HandleConsumerReconnect() error {
-	conn, err := amqp.Dial(broker.uri)
+	conn, err := amqp.DialConfig(broker.uri, amqp.Config{
+		Properties: map[string]interface{}{"connection_name": "consumer"},
+	})
 	if err != nil {
 		return fmt.Errorf("handle connect failed %w", err)
 	}
@@ -86,17 +94,21 @@ func (broker *Broker) HandleConsumerConnectCh() error {
 }
 func (broker *Broker) ConsumerClose() error {
 	if broker.consumer_ch != nil && !broker.consumer_ch.IsClosed() {
-		return broker.consumer_ch.Close()
+		if err := broker.consumer_ch.Close(); err != nil {
+			return err
+		}
 	}
 	if broker.consumer_conn != nil && !broker.consumer_conn.IsClosed() {
-		return broker.consumer_conn.Close()
+		if err := broker.consumer_conn.Close(); err != nil {
+			return err
+		}
 	}
 	broker.consumer_ch = nil
 	broker.consumer_conn = nil
 	return nil
 }
 func (broker *Broker) GenerateDeliveryChannel(ctx context.Context, qName string) (<-chan amqp.Delivery, error) {
-	if broker.consumer_ch.IsClosed() {
+	if broker.consumer_ch == nil || broker.consumer_ch.IsClosed() {
 		err := broker.ConsumerClose()
 		if err != nil {
 			log.Println("connect failed", err)
@@ -117,7 +129,7 @@ func (broker *Broker) GenerateDeliveryChannel(ctx context.Context, qName string)
 	return msgch, err
 }
 func (broker *Broker) SendMessageToQueue(ctx context.Context, qName string, data []byte) error {
-	if broker.publisher_ch.IsClosed() {
+	if broker.publisher_ch == nil || broker.publisher_ch.IsClosed() {
 		err := broker.PublisherClose()
 		if err != nil {
 			log.Println("connect failed", err)
@@ -132,7 +144,7 @@ func (broker *Broker) SendMessageToQueue(ctx context.Context, qName string, data
 		return fmt.Errorf("declare queue failed with %s %w", qName, err)
 	}
 	// setup timeout for send queue
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	err = broker.publisher_ch.PublishWithContext(
 		ctx,
@@ -152,10 +164,14 @@ func (broker *Broker) SendMessageToQueue(ctx context.Context, qName string, data
 }
 func (broker *Broker) PublisherClose() error {
 	if broker.publisher_ch != nil && !broker.publisher_ch.IsClosed() {
-		return broker.publisher_ch.Close()
+		if err := broker.publisher_ch.Close(); err != nil {
+			return err
+		}
 	}
 	if broker.publisher_conn != nil && !broker.publisher_conn.IsClosed() {
-		return broker.publisher_conn.Close()
+		if err := broker.publisher_conn.Close(); err != nil {
+			return err
+		}
 	}
 	broker.publisher_ch = nil
 	broker.publisher_conn = nil
