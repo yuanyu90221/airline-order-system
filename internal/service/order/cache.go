@@ -69,10 +69,10 @@ var CreateOrderWithFlightID = redis.NewScript(`
 local total_key = KEYS[1]..":total"
 local wait_key = KEYS[1]..":wait"
 local wait_order_key = KEYS[1]..":wait_order"
-local request = ARGV[1]
-local default_total = ARGV[2]
-local default_wait = ARGV[3]
-local default_wait_order = ARGV[4]
+local request = tonumber(ARGV[1])
+local default_total = tonumber(ARGV[2])
+local default_wait = tonumber(ARGV[3])
+local default_wait_order = tonumber(ARGV[4])
 local total = redis.call("GET", total_key)
 if not total then
 	total = default_total
@@ -123,9 +123,9 @@ var GetCurrentRemainWithFlightID = redis.NewScript(`
 local total_key = KEYS[1]..":total"
 local wait_key = KEYS[1]..":wait"
 local wait_order_key = KEYS[1]..":wait_order"
-local default_total = ARGV[1]
-local default_wait = ARGV[2]
-local default_wait_order = ARGV[3]
+local default_total = tonumber(ARGV[1])
+local default_wait = tonumber(ARGV[2])
+local default_wait_order = tonumber(ARGV[3])
 local total = redis.call("GET", total_key)
 if not total then
 	total = default_total

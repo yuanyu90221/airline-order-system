@@ -28,9 +28,6 @@ func (cacheStore *CacheStore) UpdateFlight(ctx context.Context, flightInfo types
 	flightID := flightInfo.ID.String()
 	// clear flight previous record
 	tx.Del(ctx, flightID)
-	tx.Del(ctx, fmt.Sprintf("%s:total", flightID))
-	tx.Del(ctx, fmt.Sprintf("%s:wait", flightID))
-	tx.Del(ctx, fmt.Sprintf("%s:wait_order", flightID))
 	// serialize flightInfo
 	jsonData, err := json.Marshal(flightInfo)
 	if err != nil {

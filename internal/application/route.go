@@ -11,7 +11,7 @@ import (
 // define route
 func (app *App) loadRoutes() {
 	gin.SetMode(app.config.GinMode)
-	router := gin.Default()
+	router := gin.New()
 	// recovery middleware
 	router.Use(gin.Recovery())
 

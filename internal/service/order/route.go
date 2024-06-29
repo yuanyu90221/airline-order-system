@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	bloomfilter "github.com/alovn/go-bloomfilter"
@@ -56,7 +55,7 @@ func (h *Handler) CreateOrder(ctx *gin.Context) {
 		}
 		return
 	}
-	log.Println("requestOrder", requestOrder)
+	// log.Println("requestOrder", requestOrder)
 	// use bloomfilter to check flightID exists
 	binaryFlightID, status, err := util.ParseFlightIDIntoBinary(requestOrder.FlightID)
 	if err != nil {

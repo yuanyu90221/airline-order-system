@@ -3,7 +3,6 @@ package flight
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -49,7 +48,7 @@ func (h *Handler) CreateFlight(ctx *gin.Context) {
 		}
 		return
 	}
-	log.Println("createFlight", createFlight)
+	// log.Println("createFlight", createFlight)
 	flight, err := h.flightStore.CreateFlight(ctx, createFlight)
 	if err != nil {
 		util.WriteError(ctx.Writer, http.StatusInternalServerError, err)

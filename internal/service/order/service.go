@@ -33,7 +33,7 @@ func (orderService *OrderService) CreateOrderHandler(ctx context.Context,
 	if err != nil {
 		return types.Flight{}, types.Order{}, fmt.Errorf("create db tx failed %w", err)
 	}
-	log.Println(createOrderParams, updateFlightParams)
+	// log.Println(createOrderParams, updateFlightParams)
 	order, err := orderService.orderStore.CreateOrder(tx, ctx, createOrderParams)
 	if err != nil {
 		log.Printf("failed to create order %v", err)
