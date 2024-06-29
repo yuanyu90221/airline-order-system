@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/yuanyu90221/airline-order-system/internal/broker"
@@ -15,6 +16,7 @@ type OrderWorker struct {
 	orderService     types.OrderServcie
 	flightCacheStore types.FlightCacheStore
 	mq               *broker.Broker
+	sync.RWMutex
 }
 
 func NewOrderWorker(orderService types.OrderServcie, flightCacheStore types.FlightCacheStore,
@@ -28,6 +30,8 @@ func NewOrderWorker(orderService types.OrderServcie, flightCacheStore types.Flig
 }
 
 func (orderWorker *OrderWorker) Run(ctx context.Context) error {
+	orderWorker.Lock()
+	defer orderWorker.Unlock()
 	msgch, err := orderWorker.mq.GenerateDeliveryChannel(ctx, config.AppConfig.OrderQueueName)
 	log.Println("worker start")
 	if err != nil {
@@ -67,7 +71,7 @@ func (orderWorker *OrderWorker) Run(ctx context.Context) error {
 		}
 		flight, order, err := orderWorker.orderService.CreateOrderHandler(ctx, createOrderParam, updateFlightParams)
 		if err != nil {
-			log.Printf("failed to create order %w, %v", err, order)
+			log.Printf("failed to create order %v, %v", err, order)
 			continue
 		}
 		_, err = orderWorker.flightCacheStore.UpdateFlight(ctx, flight)
