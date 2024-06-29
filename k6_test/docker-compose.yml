@@ -1,0 +1,7 @@
+services:
+  k6:
+    image: 'loadimpact/k6'
+    volumes:
+      - './script.js:/script.js'
+    command: run /script.js --vus 10000 --duration 5s
+    network_mode: host
