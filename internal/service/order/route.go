@@ -107,6 +107,9 @@ func (h *Handler) CreateOrder(ctx *gin.Context) {
 		WaitSeats:      result.CurrentWait,
 		IsWait:         result.IsWait,
 	}
+	if !requestEvent.IsWait {
+		requestEvent.WaitOrder = -1
+	}
 
 	data, err := json.Marshal(requestEvent)
 	if err != nil {
