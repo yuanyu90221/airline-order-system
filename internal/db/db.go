@@ -12,7 +12,7 @@ func Connect(url string) (*sql.DB, error) {
 		return nil, err
 	}
 	// setup limit
-	db.SetConnMaxIdleTime(0)
+	db.SetConnMaxIdleTime(3600)
 	db.SetMaxIdleConns(3)
 	db.SetMaxIdleConns(3)
 	// test ping
